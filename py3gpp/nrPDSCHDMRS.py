@@ -37,39 +37,48 @@ def nrPDSCHDMRS(cfg: nrPDSCHConfig, carrier: nrCarrierConfig):
 
 # LUT for DMRS occupied symbols positions
 def PDSCHDMRSSyms(cfg: nrPDSCHConfig):
+    assert cfg.MappingType in ["A"], "Mapping type B is not yet implemented"
     l1 = 11
     typeA_pos = cfg.DMRS.DMRSTypeAPosition
     sym_alloc = cfg.SymbolAllocation[1]
     add_pos = cfg.DMRS.DMRSAdditionalPosition
     dmrs_len = cfg.DMRS.DMRSLength
 
-    occupied_syms = np.array([], dtype=int)
-    occupied_syms = np.append(occupied_syms, typeA_pos)
+    occupied_syms = np.array([typeA_pos], dtype=int)
 
-    if sym_alloc in [8, 9]:
-        occupied_syms = np.append(occupied_syms, 7)
-    elif sym_alloc in [10, 11]:
+    if dmrs_len == 1:  # Table 7.4.1.1.2-3, Type A
+        if sym_alloc in [8, 9]:
+            if add_pos > 0:
+                occupied_syms = np.append(occupied_syms, 7)
+        elif sym_alloc in [10, 11]:
+            if add_pos == 1:
+                occupied_syms = np.append(occupied_syms, 9)
+            elif add_pos == 2 or add_pos == 3:
+                occupied_syms = np.append(occupied_syms, [6, 9])
+        elif sym_alloc == 12:
+            if add_pos == 1:
+                occupied_syms = np.append(occupied_syms, 9)
+            elif add_pos == 2:
+                occupied_syms = np.append(occupied_syms, [6, 9])
+            elif add_pos == 3:
+                occupied_syms = np.append(occupied_syms, [5, 8, 11])
+        elif sym_alloc in [13, 14]:
+            if add_pos == 1:
+                occupied_syms = np.append(occupied_syms, l1)
+            elif add_pos == 2:
+                occupied_syms = np.append(occupied_syms, [7, 11])
+            elif add_pos == 3:
+                occupied_syms = np.append(occupied_syms, [5, 8, 11])
+    else:  # Table 7.4.1.1.2-4, Type A
         if add_pos == 1:
-            occupied_syms = np.append(occupied_syms, 9)
-        elif add_pos == 2 or add_pos == 3:
-            occupied_syms = np.append(occupied_syms, [6, 9])
-    elif sym_alloc == 12:
-        if add_pos == 1:
-            occupied_syms = np.append(occupied_syms, 11)
-        elif add_pos == 2:
-            occupied_syms = np.append(occupied_syms, [7, 11])
-        elif add_pos == 3:
-            occupied_syms = np.append(occupied_syms, [5, 8, 11])
-    elif sym_alloc in [13, 14]:
-        if add_pos == 1:
-            occupied_syms = np.append(occupied_syms, l1)
-        elif add_pos == 2:
-            occupied_syms = np.append(occupied_syms, [7, 11])
-        elif add_pos == 3:
-            occupied_syms = np.append(occupied_syms, [5, 8, 11])
+            if sym_alloc in [10, 11, 12]:
+                occupied_syms = np.append(occupied_syms, 8)
+            elif sym_alloc in [13, 14]:
+                occupied_syms = np.append(occupied_syms, 10)
+        elif add_pos > 1:
+            raise ValueError("add_pos has to be [0, 1] for double-symbol")
 
-    if dmrs_len == 2:
-        occupied_syms = [x+1 for x in occupied_syms]
+        occupied_syms = np.concatenate((occupied_syms[np.newaxis], occupied_syms[np.newaxis] + 1), axis=0).T.ravel()
 
     return occupied_syms
 
